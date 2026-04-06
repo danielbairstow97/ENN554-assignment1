@@ -6,9 +6,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import yaml
 
+# from py_wake.wind_turbine import WindTurbine
+
 
 @dataclass
-class Turbine:
+class WindTurbine:
     name: str
     rated_power_kw: int
     rated_wind_speed: float
@@ -19,7 +21,7 @@ class Turbine:
     power_curve: pd.DataFrame
 
     @classmethod
-    def from_yaml(cls, yaml_path: Path, pc_path: Path) -> "Turbine":
+    def from_yaml(cls, yaml_path: Path, pc_path: Path) -> "WindTurbine":
         """
         Load a Turbine from a YAML file and automatically resolve and load
         its power curve CSV.

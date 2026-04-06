@@ -1,7 +1,8 @@
 import polars as pl
 
 from ass1.config import DATA_DIR
-from ass1.modeling.turbine import Turbine
+from ass1.modeling.location import WindResourceData
+from ass1.modeling.turbine import WindTurbine
 
 TURBINE_DATA = DATA_DIR / "turbine_data"
 
@@ -21,25 +22,38 @@ def load_tmy():
     return df
 
 
-def load_nrel_6MW() -> Turbine:
+def load_wind_resource() -> WindResourceData:
+    df = load_tmy()
+    return WindResourceData(df["datetime"], df["WS50M"], df["WD50M"])
+
+
+def load_nrel_6MW() -> WindTurbine:
     file_name = "2016CACost_NREL_Reference_6MW_155"
 
-    return Turbine.from_yaml(TURBINE_DATA / f"{file_name}.yaml", TURBINE_DATA / f"{file_name}.csv")
+    return WindTurbine.from_yaml(
+        TURBINE_DATA / f"{file_name}.yaml", TURBINE_DATA / f"{file_name}.csv"
+    )
 
 
-def load_nrel_8MW() -> Turbine:
+def load_nrel_8MW() -> WindTurbine:
     file_name = "2016CACost_NREL_Reference_8MW_180"
 
-    return Turbine.from_yaml(TURBINE_DATA / f"{file_name}.yaml", TURBINE_DATA / f"{file_name}.csv")
+    return WindTurbine.from_yaml(
+        TURBINE_DATA / f"{file_name}.yaml", TURBINE_DATA / f"{file_name}.csv"
+    )
 
 
-def load_nrel_10MW() -> Turbine:
+def load_nrel_10MW() -> WindTurbine:
     file_name = "2016CACost_NREL_Reference_10MW_205"
 
-    return Turbine.from_yaml(TURBINE_DATA / f"{file_name}.yaml", TURBINE_DATA / f"{file_name}.csv")
+    return WindTurbine.from_yaml(
+        TURBINE_DATA / f"{file_name}.yaml", TURBINE_DATA / f"{file_name}.csv"
+    )
 
 
-def load_dtu_10MW() -> Turbine:
+def load_dtu_10MW() -> WindTurbine:
     file_name = "DTU_Reference_v1_10MW_178"
 
-    return Turbine.from_yaml(TURBINE_DATA / f"{file_name}.yaml", TURBINE_DATA / f"{file_name}.csv")
+    return WindTurbine.from_yaml(
+        TURBINE_DATA / f"{file_name}.yaml", TURBINE_DATA / f"{file_name}.csv"
+    )

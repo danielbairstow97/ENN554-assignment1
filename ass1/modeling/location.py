@@ -5,9 +5,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import polars as pl
 from scipy import integrate
+from scipy.integrate import quad
 from scipy.stats import weibull_min
 
-from ass1.modeling.turbine import Turbine
+from ass1.modeling.turbine import WindTurbine
 
 
 class WindResourceModel:
@@ -21,12 +22,20 @@ class WindResourceModel:
     def pdf(self, ws: np.ndarray):
         return weibull_min.pdf(ws, self.shape, loc=0, scale=self.scale)
 
-    def aep(self, turbine: Turbine, n_points: int = 1000) -> float:
+    def aep(self, turbine: WindTurbine, n_points: int = 1000) -> float:
         ws_rng = np.linspace(0, turbine.cut_out_wind_speed, n_points)
         power = turbine.power_at(ws_rng)
         pdf_val = self.pdf(ws_rng)
 
-        return 8760 * (power * pdf_val).sum()
+        # return 8760 * (power * pdf_val).sum()
+        aep, err = 8760 * quad(
+            lambda x: turbine.power_at(x) * self.pdf(x), 0, turbine.cut_out_wind_speed
+        )
+
+        if err is not None:
+            raise err
+
+        return aep
 
     def plot_power_distribution(self, turbine, n_points: int = 1000):
         ws_grid = np.linspace(0, turbine.cut_out_wind_speed * 1.05, n_points)
@@ -144,7 +153,7 @@ class WindResourceModel:
 
     def plot_cumulative_distributions(
         self,
-        turbines: list[Turbine],
+        turbines: list[WindTurbine],
         n_points: int = 500,
     ):
         # Use the highest cut-out across all turbines as the x-axis limit
