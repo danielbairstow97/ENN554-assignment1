@@ -542,7 +542,7 @@ class WindResourceData:
                         y=rolling.values,
                         mode="lines",
                         line=dict(color="#ff6b35", width=2.5),
-                        name=f"Rolling Mean ({rolling_window})",
+                        name=f"Rolling Mean ({rolling_window} hours)",
                     )
                 )
 

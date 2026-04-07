@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from ass1.modeling.farm import WindFarm
 from ass1.modeling.turbine import WindTurbine
 
 
@@ -20,22 +21,19 @@ class FinancialModel:
     # @property
     # def fcr(self):
 
-    def cost_turbine_components(self, turbine: WindTurbine) -> tuple[float, float, float]:
-        c_rotor = self.wt_rotor_cost * turbine.rotor_area
-        c_tower = self.wt_tower_cost * turbine.rotor_area
-        c_other = self.wt_other_cost * turbine.rated_power_kw
+    def cost_turbine(self, turbine: WindTurbine) -> tuple[float, dict[str, float]]:
+        costs = {}
+        costs["Rotor"] = self.wt_rotor_cost * turbine.rotor_area
+        costs["Tower"] = self.wt_tower_cost * turbine.rotor_area
+        costs["Other"] = self.wt_other_cost * turbine.rated_power_kw
 
-        return c_rotor, c_tower, c_other
-
-    def cost_turbine(self, turbine: WindTurbine):
-        c_rotor, c_tower, c_other = self.cost_turbine_components(turbine)
-        return c_rotor + c_tower + c_other
+        return sum(costs.values()), costs
 
     def cost_turbine_opex(self, turbine):
         return self.wt_foc * turbine.rated_power_kw
 
     def lcoe(self, turbine: WindTurbine, aep: float) -> float:
-        capex = self.cost_turbine(turbine)
+        capex, _ = self.cost_turbine(turbine)
         opex = self.cost_turbine_opex(turbine)
 
         ucrf = self.fcr * (1 + self.fcr) ** self.project_lifetime / ((1 + self.fcr) - 1)
@@ -43,3 +41,6 @@ class FinancialModel:
         lcoe = (ucrf * capex + opex) / (aep)
 
         return lcoe
+
+    def cost_windfarm(self, farm: WindFarm):
+        return 0.0

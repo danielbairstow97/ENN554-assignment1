@@ -8,6 +8,7 @@ TURBINE_DATA = DATA_DIR / "turbine_data"
 
 
 def load_tmy():
+    """Load the Typical Meteorological Year of the site"""
     tmy_path = DATA_DIR / "nasa_tmy.csv"
     with open(tmy_path) as fp:
         skip_until_line = next(filter(lambda x: x[1].startswith("YEAR"), enumerate(fp)))[0]
@@ -16,15 +17,30 @@ def load_tmy():
     df = df.with_columns(
         pl.datetime(
             year=pl.col("YEAR"), month=pl.col("MO"), day=pl.col("DY"), hour=pl.col("HR")
-        ).alias("datetime")
+        ).alias("Time")
     )
 
     return df
 
 
+def load_demand():
+    """Load demand at the site"""
+    demand_path = DATA_DIR / "load_project_2026-1.xlsx"
+
+    return pl.read_excel(demand_path)
+
+
+def load_site_year() -> pl.DataFrame:
+    """Load demand and wind speed at the site"""
+    demand = load_demand().with_columns(pl.col("Time").dt.cast_time_unit("us"))
+    weather = load_tmy().with_columns(pl.col("Time").dt.replace(year=demand["Time"][0].year))
+
+    return demand.join(weather, on="Time", how="inner")["Time", "Load [MW]", "WS50M", "WD50M"]
+
+
 def load_wind_resource() -> WindResourceData:
     df = load_tmy()
-    return WindResourceData(df["datetime"], df["WS50M"], df["WD50M"])
+    return WindResourceData(df["Time"], df["WS50M"], df["WD50M"])
 
 
 def load_nrel_6MW() -> WindTurbine:

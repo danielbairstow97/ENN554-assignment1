@@ -5,43 +5,30 @@ from ass1.modeling.farm import WindFarm
 
 
 class Microgrid:
-    demand_df: pd.DataFrame
-    farm: WindFarm
-
-    n: pypsa.Network | None = None
-
-    def build_network(self):
-        """Build network components that will be solved for."""
+    def __init__(self, farm: WindFarm):
+        self.farm = farm
         n = pypsa.Network()
 
+        # Add network components
         n.add("Load", "demand")
 
         self.n = n
 
-    def prepare_network(self, demand: pd.Series, ws_50: pd.Series):
+    def prepare_network(self, site: pd.DataFrame):
         """Prepare network for solving. This requires setting the _t values of loads and wind turbines."""
-        if self.n is None:
-            raise ValueError("Network should be set")
-
-        if not demand.index.equals(ws_50.index):
-            raise ValueError("demand and wind speed data should share the same datetime index")
-
         # This prepares the timeseries of the network
-        self.n.set_snapshots(demand.index)
+        self.n.set_snapshots(time)
 
         # Sets the demand that must be met
         self.n.loads_t.p_set["demand"] = 0.0
 
         # This has to be incorporated into the network
-        windfarm_output = self.farm.get_output(ws_50.values)
+        windfarm_output = self.farm.get_output(ws_50)
 
     def solve_network(self) -> float:
         """Solve network, returning battery size"""
-        if self.n is None:
-            raise ValueError("Network should be set")
-
         # If prepare_network correctly implemented this will succeed
-        self.n.optimise()
+        self.n.optimize()
 
         # Extract battery optimised battery size
         return 0.0
