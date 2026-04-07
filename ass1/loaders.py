@@ -1,4 +1,4 @@
-import polars as pl
+import pandas as pd
 
 from ass1.config import DATA_DIR
 from ass1.modeling.location import WindResourceData
@@ -11,31 +11,34 @@ def load_tmy():
     """Load the Typical Meteorological Year of the site"""
     tmy_path = DATA_DIR / "nasa_tmy.csv"
     with open(tmy_path) as fp:
-        skip_until_line = next(filter(lambda x: x[1].startswith("YEAR"), enumerate(fp)))[0]
+        skip_until_line = next(i for i, line in enumerate(fp) if line.startswith("YEAR"))
 
-    df = pl.read_csv(tmy_path, skip_rows=skip_until_line)
-    df = df.with_columns(
-        pl.datetime(
-            year=pl.col("YEAR"), month=pl.col("MO"), day=pl.col("DY"), hour=pl.col("HR")
-        ).alias("Time")
+    df = pd.read_csv(tmy_path, skiprows=skip_until_line, dtype_backend="numpy_nullable")
+    df["Time"] = pd.to_datetime(
+        df[["YEAR", "MO", "DY", "HR"]].rename(
+            columns={"YEAR": "year", "MO": "month", "DY": "day", "HR": "hour"}
+        )
     )
-
     return df
 
 
 def load_demand():
     """Load demand at the site"""
     demand_path = DATA_DIR / "load_project_2026-1.xlsx"
+    return pd.read_excel(demand_path, dtype_backend="numpy_nullable")
 
-    return pl.read_excel(demand_path)
 
-
-def load_site_year() -> pl.DataFrame:
+def load_site_year() -> pd.DataFrame:
     """Load demand and wind speed at the site"""
-    demand = load_demand().with_columns(pl.col("Time").dt.cast_time_unit("us"))
-    weather = load_tmy().with_columns(pl.col("Time").dt.replace(year=demand["Time"][0].year))
+    demand = load_demand()
+    weather = load_tmy()
 
-    return demand.join(weather, on="Time", how="inner")["Time", "Load [MW]", "WS50M", "WD50M"]
+    # Replace TMY year with the demand year so the join keys align
+    site_year = demand["Time"].dt.year.iloc[0]
+    weather["Time"] = weather["Time"].apply(lambda t: t.replace(year=site_year))
+
+    merged = demand.merge(weather, on="Time", how="inner")
+    return merged[["Time", "Load [MW]", "WS50M", "WD50M"]]
 
 
 def load_wind_resource() -> WindResourceData:

@@ -1,71 +1,85 @@
-from dataclasses import dataclass
+from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+from py_wake.wind_turbines import WindTurbine as _PyWakeWindTurbine
+from py_wake.wind_turbines.power_ct_functions import PowerCtTabular
 import yaml
 
-# from py_wake.wind_turbine import WindTurbine
 
+class WindTurbine(_PyWakeWindTurbine):
+    """
+    Project wind turbine — extends PyWake's WindTurbine with:
+      - YAML + CSV loading via from_yaml()
+      - Project-specific metadata (rated power, cut-in/out, etc.)
+      - power_at() convenience method for numpy arrays
+      - Plotly power curve plotWW
+    """
 
-@dataclass
-class WindTurbine:
-    name: str
-    rated_power_kw: int
-    rated_wind_speed: float
-    cut_in_wind_speed: float
-    cut_out_wind_speed: float
-    rotor_diameter: float
-    hub_height: float
-    power_curve: pd.DataFrame
+    def __init__(
+        self,
+        name: str,
+        rated_power_kw: int,
+        rated_wind_speed: float,
+        cut_in_wind_speed: float,
+        cut_out_wind_speed: float,
+        rotor_diameter: float,
+        hub_height: float,
+        power_curve: pd.DataFrame,
+    ) -> None:
+        # Store project metadata before calling super().__init__
+        # so it's available if PyWake calls any overridden methods during init
+        self.name_str = name
+        self.rotor_area = np.pi * (rotor_diameter / 2) ** 2
+        self.rated_power_kw = rated_power_kw
+        self.rated_wind_speed = rated_wind_speed
+        self.cut_in_wind_speed = cut_in_wind_speed
+        self.cut_out_wind_speed = cut_out_wind_speed
+        self.power_curve = power_curve
 
+        ws = power_curve["wind_speed"].to_numpy()
+        power = power_curve["power_kw"].to_numpy()
+        ct = power_curve["Cp"].to_numpy()
+
+        super().__init__(
+            name=name,
+            diameter=rotor_diameter,
+            hub_height=hub_height,
+            powerCtFunction=PowerCtTabular(ws, power, "kW", ct),
+        )
+
+    # ------------------------------------------------------------------
+    # Factory
+    # ------------------------------------------------------------------
     @classmethod
     def from_yaml(cls, yaml_path: Path, pc_path: Path) -> "WindTurbine":
-        """
-        Load a Turbine from a YAML file and automatically resolve and load
-        its power curve CSV.
-
-        Parameters
-        ----------
-        yaml_path : str | Path
-            Path to the turbine YAML file.
-        turbine_dir : str | Path
-            Root directory that contains turbine data files. The
-            ``power_curve_file`` field in the YAML is resolved relative
-            to this directory.
-
-        Returns
-        -------
-        Turbine
-        """
-        yaml_path = Path(yaml_path)
+        yaml_path, pc_path = Path(yaml_path), Path(pc_path)
 
         if not yaml_path.exists():
-            raise FileNotFoundError(f"YAML file not found: {yaml_path}")
+            raise FileNotFoundError(f"YAML not found: {yaml_path}")
+        if not pc_path.exists():
+            raise FileNotFoundError(f"Power curve CSV not found: {pc_path}")
 
         with yaml_path.open("r") as f:
             raw: dict = yaml.safe_load(f)
 
-        # --- Normalise None-like values produced by bare YAML keys ---
         def _clean(v):
-            """Return None for empty/whitespace strings."""
-            if isinstance(v, str) and not v.strip():
-                return None
-            return v
+            return None if (isinstance(v, str) and not v.strip()) else v
 
         raw = {k: _clean(v) for k, v in raw.items()}
 
-        # --- Load power curve CSV ---
-        if not pc_path.exists():
-            raise FileNotFoundError(f"Power curve CSV not found: {pc_path}\n")
-
         pc_df = pd.read_csv(pc_path).rename(
-            columns={"Wind Speed [m/s]": "wind_speed", "Power [kW]": "power_kw", "Cp [-]": "Cp"}
+            columns={
+                "Wind Speed [m/s]": "wind_speed",
+                "Power [kW]": "power_kw",
+                "Cp [-]": "Cp",
+            }
         )
 
         return cls(
-            # Required
             name=raw["name"],
             rated_power_kw=int(raw["rated_power"]),
             rated_wind_speed=float(raw["rated_wind_speed"]),
@@ -76,55 +90,39 @@ class WindTurbine:
             power_curve=pc_df,
         )
 
-    @property
-    def rotor_area(self) -> float:
-        """Swept rotor area in m²."""
-        return 3.14159265358979 * (self.rotor_diameter / 2) ** 2
+    # ------------------------------------------------------------------
+    # Power calculation
+    # ------------------------------------------------------------------
+    def power_at(self, ws_hub: np.ndarray) -> np.ndarray:
+        """
+        Power output (kW) at hub-height wind speeds, with cut-in/out applied.
+        Delegates to PyWake's interpolation — no duplicated logic.
+        """
+        ws_hub = np.asarray(ws_hub, dtype=float)
+        power = self.power(ws_hub) / 1_000  # PyWake returns watts → kW
+        power[(ws_hub < self.cut_in_wind_speed) | (ws_hub > self.cut_out_wind_speed)] = 0.0
+        return power
 
-    def power_at(
-        self, turbine_ws: np.ndarray | None = None, ws_50: np.ndarray | None = None
-    ) -> np.ndarray:
-        # Recalculate wind speed seen at hub
-        if turbine_ws is None:
-            if ws_50 is None:
-                raise ValueError("Wind speed or turbine wind speed must be provided")
-            turbine_ws = ws_50 * (self.hub_height / 50.0) ** (1 / 7.0)
+    def power_at_50m(self, ws_50: np.ndarray) -> np.ndarray:
+        ws_hub = np.asarray(ws_50, dtype=float) * (self.hub_height() / 50.0) ** (1 / 7.0)
+        return self.power_at(ws_hub)
 
-        curve = self.power_curve.sort_values("wind_speed")
-        power = np.interp(
-            turbine_ws,
-            curve["wind_speed"].to_numpy(),
-            curve["power_kw"].to_numpy(),
-            left=0.0,  # below cut-in → 0
-            right=0.0,  # above cut-out → 0
-        )
+    # ------------------------------------------------------------------
+    # Plot
+    # ------------------------------------------------------------------
+    def plot_power_curve(self) -> go.Figure:
+        ws_range = np.linspace(0, self.cut_out_wind_speed + 2, 300)
+        power_kw = self.power(ws_range) / 1_000
 
-        # Zero out anything outside the operational envelope
-        power[(turbine_ws < self.cut_in_wind_speed) | (turbine_ws > self.cut_out_wind_speed)] = 0.0
-
-        return turbine_ws, power
-
-    def plot_power_curve(self):
         fig = go.Figure(
-            data=[
-                go.Scatter(
-                    x=self.power_curve["wind_speed"],
-                    y=self.power_curve["power_kw"],
-                    mode="lines",
-                )
-            ],
-            layout=go.Layout(
-                width=500,
-                height=400,
-                xaxis=dict(title="Wind Speed (m/s)"),
-                yaxis=dict(title="Turbine Power Output (kW)"),
-                template="plotly_dark",
-                paper_bgcolor="#0f1117",
-                plot_bgcolor="#0f1117",
-                hovermode="x unified",
-            ),
+            go.Scatter(
+                x=ws_range,
+                y=power_kw,
+                mode="lines",
+                line=dict(color="#00d4ff", width=2.5),
+                name="Power curve",
+            )
         )
-
         for speed, label, color in [
             (self.cut_in_wind_speed, "Cut-in", "#34d399"),
             (self.rated_wind_speed, "Rated", "#fbbf24"),
@@ -137,5 +135,18 @@ class WindTurbine:
                 annotation_position="top",
                 annotation_font=dict(color=color, size=11),
             )
-
+        fig.update_layout(
+            title=dict(text=f"Power Curve – {self.name()}", x=0.5),
+            xaxis=dict(
+                title="Wind Speed (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
+            ),
+            yaxis=dict(
+                title="Power Output (kW)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
+            ),
+            width=600,
+            height=420,
+            paper_bgcolor="#0f1117",
+            plot_bgcolor="#0f1117",
+            hovermode="x unified",
+        )
         return fig

@@ -25,7 +25,6 @@ dependencies = [
     "typer",
     "ipykernel (>=7.2.0,<8.0.0)",
     "enn554 @ file:enn554",
-    "polars (>=1.39.3,<2.0.0)",
     "plotly (>=6.6.0,<7.0.0)",
     "py-wake (>=2.6.20,<3.0.0)",
     "pypsa (>=1.1.2,<2.0.0)",

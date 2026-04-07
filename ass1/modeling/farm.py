@@ -21,12 +21,13 @@ class WindFarm:
 
         # Build the WindFarm
 
-    def get_output(self, ws_50: np.ndarray) -> np.ndarray:
+    def power_at_50m(self, ws_50: np.ndarray, wd: np.ndarray) -> np.ndarray:
         """Calculate the output of the windfarm based on the input wind speed at 50m."""
 
         # This just returns a list of zeros
         return np.zeros_like(ws_50)
 
+    @property
     def nameplate_capacity_mw(self) -> float:
         """Nameplate capacity of the wind farm in MW"""
         return 0.0
