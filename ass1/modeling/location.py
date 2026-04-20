@@ -155,9 +155,6 @@ class WindResourceModel:
                 title="Wind Speed (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
             ),
             legend=dict(x=0.65, y=0.95),
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
             hovermode="x unified",
         )
         fig.update_yaxes(
@@ -289,9 +286,6 @@ class WindResourceModel:
                 x=0.5,
             ),
             legend=dict(x=0.52, y=0.15),
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
             hovermode="x unified",
             height=500,
         )
@@ -475,9 +469,6 @@ class WindResourceData:
                     angularaxis=dict(direction="clockwise", rotation=90),
                 ),
                 legend=dict(title="Wind Speed", x=1.05),
-                template="plotly_dark",
-                paper_bgcolor="#0f1117",
-                plot_bgcolor="#0f1117",
             )
 
         elif mode == "heatmap":
@@ -523,9 +514,6 @@ class WindResourceData:
                     radialaxis=dict(ticksuffix=" m/s", angle=90, tickfont_size=10),
                     angularaxis=dict(direction="clockwise", rotation=90),
                 ),
-                template="plotly_dark",
-                paper_bgcolor="#0f1117",
-                plot_bgcolor="#0f1117",
             )
         else:
             raise ValueError(f"mode must be 'bar' or 'heatmap', got '{mode}'")
@@ -585,9 +573,6 @@ class WindResourceData:
                 title="Wind Speed (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
             ),
             legend=dict(x=0.01, y=0.99),
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
             hovermode="x unified",
         )
         return fig
@@ -634,9 +619,6 @@ class WindResourceData:
             ),
             legend=dict(x=0.75, y=0.95),
             barmode="overlay",
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
         )
         return fig
 
@@ -726,9 +708,6 @@ class WindResourceData:
                 showgrid=False,
             ),
             yaxis=dict(title="Month", autorange="reversed", showgrid=False),
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
             margin=dict(l=60, r=100, t=70, b=60),
             height=520,
         )

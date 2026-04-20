@@ -145,8 +145,6 @@ class WindTurbine(_PyWakeWindTurbine):
             ),
             width=600,
             height=420,
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
             hovermode="x unified",
         )
         return fig
