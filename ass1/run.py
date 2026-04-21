@@ -26,9 +26,9 @@ app = typer.Typer()
 # ---------------------------------------------------------------------------
 def _save(fig, path):
     """Save a Plotly figure, skipping if the file already exists."""
-    if path.exists():
-        typer.echo(f"  [skip] {path.name} already exists")
-        return
+    #if path.exists():
+    #    typer.echo(f"  [skip] {path.name} already exists")
+    #    return
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.write_image(str(path))
     typer.echo(f"  [save] {path.name}")
@@ -125,7 +125,7 @@ def assess_windfarm(wind: WindResourceModel, farm: WindFarm) -> None:
     typer.echo(f"── Wind farm assessment: {farm.configuration}")
     out = OUTPUT_DIR / "farm" / str(farm.configuration)
     out.mkdir(parents=True, exist_ok=True)
-
+    _save(farm.plot_aep_per_turbine(wind), out / "aep_per_turbine.jpeg")
 
 def compare_microgrids(fin: FinancialModel, turbine: WindTurbine) -> None:
     """Solve the microgrid network for each farm configuration."""
@@ -179,6 +179,9 @@ def main(
         raise typer.Exit("Re-run with --compare to select a turbine before --farm.")
 
     if farm:
+        for config in CO:
+            wf = WindFarm(config, best_turbine, wind_data)
+            assess_windfarm(wind_resource, wf)
         compare_microgrids(fin, best_turbine)
 
 
