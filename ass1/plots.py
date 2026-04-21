@@ -37,7 +37,7 @@ def plot_load_timeseries(df: pd.DataFrame, rolling_window: int = 7 * 24) -> go.F
         )
     )
     fig.update_layout(
-        title=dict(text="Site Load Over Year", x=0.5),
+
         xaxis=dict(title="Date", showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
         yaxis=dict(title="Load (MW)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
         legend=dict(x=0.01, y=0.99),
