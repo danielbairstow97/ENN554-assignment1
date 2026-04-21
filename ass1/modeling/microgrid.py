@@ -6,7 +6,7 @@ from ass1.modeling.farm import WindFarm
 
 class Microgrid:
     def __init__(self, farm: WindFarm):
-        self.farm = farm
+        seldsgssf.farm = farm
         n = pypsa.Network()
 
         # Add network components
