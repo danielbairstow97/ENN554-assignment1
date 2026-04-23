@@ -1,6 +1,5 @@
 import numpy as np
-from zmq import Enum
-
+from enum import Enum
 from ass1.modeling.turbine import WindTurbine
 
 
@@ -11,7 +10,6 @@ class ConfigurationOption(Enum):
 
 
 class WindFarm:
-    # Turbine chosen for the wind farm
     turbine: WindTurbine
     configuration: ConfigurationOption
 
@@ -19,15 +17,14 @@ class WindFarm:
         self.configuration = configuration
         self.turbine = turbine
 
-        # Build the WindFarm
-
-    def power_at_50m(self, ws_50: np.ndarray, wd: np.ndarray) -> np.ndarray:
-        """Calculate the output of the windfarm based on the input wind speed at 50m."""
-
-        # This just returns a list of zeros
-        return np.zeros_like(ws_50)
+    @property
+    def n_turbines(self) -> int:
+        return self.configuration.value
 
     @property
     def nameplate_capacity_mw(self) -> float:
-        """Nameplate capacity of the wind farm in MW"""
-        return 0.0
+        return self.turbine.rated_power_kw * self.n_turbines / 1000.0
+
+    def power_at_50m(self, ws_50: np.ndarray, wd: np.ndarray) -> np.ndarray:
+        per_turbine_kw = self.turbine.power_at_50m(ws_50)
+        return per_turbine_kw * self.n_turbines
