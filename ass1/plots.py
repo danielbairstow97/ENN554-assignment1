@@ -158,7 +158,6 @@ def plot_correlation_heatmap(df: pd.DataFrame) -> go.Figure:
 
     corr = features.corr(method="pearson")
 
-    corr.to_csv("test.csv")
     labels = corr.columns.tolist()
     z = corr.values
 
