@@ -155,9 +155,6 @@ class WindResourceModel:
                 title="Wind Speed (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
             ),
             legend=dict(x=0.65, y=0.95),
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
             hovermode="x unified",
         )
         fig.update_yaxes(
@@ -289,9 +286,6 @@ class WindResourceModel:
                 x=0.5,
             ),
             legend=dict(x=0.52, y=0.15),
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
             hovermode="x unified",
             height=500,
         )
@@ -469,15 +463,11 @@ class WindResourceData:
                 )
 
             fig.update_layout(
-                title=dict(text="Wind Rose – Frequency by Direction & Speed", x=0.5),
                 polar=dict(
                     radialaxis=dict(ticksuffix="%", angle=90, tickfont_size=10),
                     angularaxis=dict(direction="clockwise", rotation=90),
                 ),
                 legend=dict(title="Wind Speed", x=1.05),
-                template="plotly_dark",
-                paper_bgcolor="#0f1117",
-                plot_bgcolor="#0f1117",
             )
 
         elif mode == "heatmap":
@@ -518,14 +508,10 @@ class WindResourceData:
                 )
             )
             fig.update_layout(
-                title=dict(text="Wind Rose – Frequency Heatmap", x=0.5),
                 polar=dict(
                     radialaxis=dict(ticksuffix=" m/s", angle=90, tickfont_size=10),
                     angularaxis=dict(direction="clockwise", rotation=90),
                 ),
-                template="plotly_dark",
-                paper_bgcolor="#0f1117",
-                plot_bgcolor="#0f1117",
             )
         else:
             raise ValueError(f"mode must be 'bar' or 'heatmap', got '{mode}'")
@@ -574,21 +560,19 @@ class WindResourceData:
                         y=rolling.values,
                         mode="lines",
                         line=dict(color="#ff6b35", width=2.5),
-                        name=f"Rolling Mean ({rolling_window} hours)",
+                        name=f"Rolling Mean ({rolling_window // 24} days)",
                     )
                 )
 
         fig.update_layout(
-            title=dict(text="Wind Speed Over Time", x=0.5),
             xaxis=dict(title="Date", showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
             yaxis=dict(
                 title="Wind Speed (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
             ),
             legend=dict(x=0.01, y=0.99),
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
             hovermode="x unified",
+            width=1200,
+            height=500,
         )
         return fig
 
@@ -625,7 +609,6 @@ class WindResourceData:
             )
 
         fig.update_layout(
-            title=dict(text="Wind Speed Distribution", x=0.5),
             xaxis=dict(
                 title="Wind Speed (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
             ),
@@ -634,24 +617,23 @@ class WindResourceData:
             ),
             legend=dict(x=0.75, y=0.95),
             barmode="overlay",
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
+            width=1200,
+            height=500,
         )
         return fig
 
-    def plot_wind_speed_heatmap(self, agg: str = "mean", colorscale: str = "Viridis"):
+    def plot_wind_speed_heatmap(self, agg: str = "mean", colorscale: str = "inferno"):
         dt = pd.to_datetime(self.datetime)
         df = pd.DataFrame({"value": np.array(self.wind_speed)}, index=dt)
         return self._plot_wind_heatmap(df, "Wind Speed (m/s)", agg=agg, colorscale=colorscale)
 
-    def plot_wind_direction_heatmap(self, agg: str = "mean", colorscale: str = "Viridis"):
+    def plot_wind_direction_heatmap(self, agg: str = "mean", colorscale: str = "inferno"):
         dt = pd.to_datetime(self.datetime)
         df = pd.DataFrame({"value": np.array(self.wind_direction)}, index=dt)
         return self._plot_wind_heatmap(df, "Wind Direction (°)", agg=agg, colorscale=colorscale)
 
     def _plot_wind_heatmap(
-        self, df: pd.DataFrame, name: str, agg: str = "mean", colorscale: str = "Viridis"
+        self, df: pd.DataFrame, name: str, agg: str = "mean", colorscale: str = "inferno"
     ):
         df = df.copy()
         df["month"] = df.index.month
@@ -712,11 +694,6 @@ class WindResourceData:
             )
         )
         fig.update_layout(
-            title=dict(
-                text=f"{name} Heatmap – {agg.capitalize()} by Month & Hour of Day",
-                x=0.5,
-                font=dict(size=16),
-            ),
             xaxis=dict(
                 title="Hour of Day",
                 tickmode="array",
@@ -726,10 +703,8 @@ class WindResourceData:
                 showgrid=False,
             ),
             yaxis=dict(title="Month", autorange="reversed", showgrid=False),
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
             margin=dict(l=60, r=100, t=70, b=60),
-            height=520,
+            width=1000,
+            height=500,
         )
         return fig
