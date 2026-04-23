@@ -4,7 +4,6 @@ import typer
 
 from ass1.config import OUTPUT_DIR
 from ass1.loaders import (
-    load_demand,
     load_dtu_10MW,
     load_nrel_6MW,
     load_nrel_8MW,
@@ -18,7 +17,12 @@ from ass1.modeling.financial import FinancialModel
 from ass1.modeling.location import WindResourceData, WindResourceModel
 from ass1.modeling.microgrid import Microgrid
 from ass1.modeling.turbine import WindTurbine
-from ass1.plots import plot_load_heatmap, plot_load_timeseries
+from ass1.plots import (
+    plot_correlation_heatmap,
+    plot_load_heatmap,
+    plot_load_timeseries,
+    plot_seasonal_wind_roses,
+)
 
 app = typer.Typer()
 
@@ -32,15 +36,17 @@ def _save(fig, path):
         typer.echo(f"  [skip] {path.name} already exists")
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig.write_image(str(path))
+    fig.write_image(str(path), scale=4)
     typer.echo(f"  [save] {path.name}")
 
 
-def assess_load():
+def assess_extra():
     out = OUTPUT_DIR / "load"
-    demand = load_demand()
-    _save(plot_load_timeseries(demand), out / "timeseries.jpeg")
-    _save(plot_load_heatmap(demand), out / "heatmap.jpeg")
+    data = load_site_year()
+    _save(plot_load_timeseries(data), out / "timeseries.jpeg")
+    _save(plot_load_heatmap(data), out / "heatmap.jpeg")
+    _save(plot_correlation_heatmap(data), OUTPUT_DIR / "correlations.jpeg")
+    _save(plot_seasonal_wind_roses(data), OUTPUT_DIR / "wind_resource/seasonal_windrose.jpeg")
 
 
 # ---------------------------------------------------------------------------
@@ -176,7 +182,7 @@ def main(
     turbine_options = [load_nrel_6MW(), load_nrel_8MW(), load_nrel_10MW(), load_dtu_10MW()]
 
     if assess:
-        assess_load()
+        assess_extra()
         assess_wind_resource(wind_data)
         for turbine in turbine_options:
             assess_turbine(turbine, wind_resource)
