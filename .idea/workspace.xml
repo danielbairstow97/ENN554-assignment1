@@ -4,7 +4,6 @@
     <list default="true" id="3acd93fa-17a9-45b3-a68b-fd2b471510b5" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ass1/modeling/farm.py" beforeDir="false" afterPath="$PROJECT_DIR$/ass1/modeling/farm.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ass1/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/ass1/run.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/enn554" beforeDir="false" afterPath="$PROJECT_DIR$/enn554" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/enn554/notebooks/experimental/wind_farm_layout.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/enn554/notebooks/experimental/wind_farm_layout.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/output/farm/ConfigurationOption.NINE/aep_per_turbine.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/farm/ConfigurationOption.NINE/aep_per_turbine.jpeg" afterDir="false" />
@@ -38,7 +37,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "ai.playground.ignore.import.keys.banner.in.settings": "true",
-    "git-widget-placeholder": "Aritz/test",
+    "git-widget-placeholder": "Aritz/farm__new",
     "last_opened_file_path": "C:/Uni/14. Semester/Kurse/Design of Renewable Energy Production Systems/Python/ENN554-assignment1",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "advanced.settings",

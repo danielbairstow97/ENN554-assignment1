@@ -64,35 +64,78 @@ class WindFarm:
 
         return (rot_matrix @ corners.T).T
 
-    def _make_start_pos(self) -> tuple[np.ndarray, np.ndarray]:
+    def _make_start_pos(self, wind_model: WindResourceModel) -> tuple[np.ndarray, np.ndarray]:
         """
-        Generate evenly spread starting positions inside the boundary.
-
-        The exact positions don't matter much — will get moved.
-        We just need turbines spread out inside the boundary so the
-        optimizer has a good starting point.
-
-        Uses a regular grid with equal spacing in both directions,
-        rotated to match the boundary orientation.
+        Generate starting positions using a Smart Start inspired approach.
+        Places turbines one by one at the position that maximises AEP.
+        Automatically relaxes minimum spacing if not enough candidates available.
         """
-        n = self.configuration.value
-        n_row = int(np.sqrt(n))
+        site = wind_model.pywake_site
+        wfm = Bastankhah_PorteAgel_2014(site, self.turbine, k=0.04)
+        n_wt = self.configuration.value
+        D = self.turbine.diameter()
         size = self.BOUNDARY_SIZE_M
 
-        # Equal spacing in both directions — fills the boundary evenly
-        # Small margin (5%) so starting positions don't sit on the boundary edge
-        margin = size * 0.05
-        spacing = (size - 2 * margin) / (n_row - 1) if n_row > 1 else 0
+        # Denser candidate grid — more options for tight configurations
+        n_cand = 30  # 30×30 = 900 candidates
+        x_cand = np.linspace(size * 0.05, size * 0.95, n_cand)
+        y_cand = np.linspace(size * 0.05, size * 0.95, n_cand)
+        xx, yy = np.meshgrid(x_cand, y_cand)
+        x_cand = xx.flatten()
+        y_cand = yy.flatten()
 
-        xs, ys = [], []
-        for row in range(n_row):
-            for col in range(n_row):
-                xs.append(margin + col * spacing)
-                ys.append(margin + row * spacing)
+        placed_x = []
+        placed_y = []
 
-        xs, ys = np.array(xs), np.array(ys)
+        for i in range(n_wt):
 
-        return xs, ys
+            # Start with 2D minimum spacing, relax if no valid candidates found
+            for min_spacing in [2 * D, 1.5 * D, 1 * D, 0.5 * D]:
+                valid_candidates = []
+
+                for cx, cy in zip(x_cand, y_cand):
+                    too_close = any(
+                        np.sqrt((cx - px) ** 2 + (cy - py) ** 2) < min_spacing
+                        for px, py in zip(placed_x, placed_y)
+                    )
+                    if not too_close:
+                        valid_candidates.append((cx, cy))
+
+                if valid_candidates:
+                    break  # found valid candidates at this spacing — use them
+
+            if not valid_candidates:
+                # Absolute fallback — just pick the candidate furthest from all placed turbines
+                best_x, best_y = max(
+                    zip(x_cand, y_cand),
+                    key=lambda p: min(
+                        np.sqrt((p[0] - px) ** 2 + (p[1] - py) ** 2)
+                        for px, py in zip(placed_x, placed_y)
+                    ) if placed_x else 0
+                )
+            else:
+                # Find best AEP among valid candidates
+                best_aep = -np.inf
+                best_x = valid_candidates[0][0]
+                best_y = valid_candidates[0][1]
+
+                for cx, cy in valid_candidates:
+                    xs = np.array(placed_x + [cx])
+                    ys = np.array(placed_y + [cy])
+                    aep = float(wfm(xs, ys).aep().sum())
+
+                    if aep > best_aep:
+                        best_aep = aep
+                        best_x = cx
+                        best_y = cy
+
+            placed_x.append(best_x)
+            placed_y.append(best_y)
+            print(f"  Smart Start: placed turbine {i + 1}/{n_wt} "
+                  f"at ({best_x:.0f}, {best_y:.0f}) "
+                  f"[min spacing used: {min_spacing / D:.1f}D]")
+
+        return np.array(placed_x), np.array(placed_y)
 
     def optimize_layout(self, wind_model: WindResourceModel) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -114,7 +157,7 @@ class WindFarm:
         n_wt = self.configuration.value
 
         # Starting positions — evenly spread inside the boundary
-        x_init, y_init = self._make_start_pos()
+        x_init, y_init = self._make_start_pos(wind_model)
         angle_init = 0.0
 
         # Flatten into single array: [x0..xn, y0..yn, angle]
