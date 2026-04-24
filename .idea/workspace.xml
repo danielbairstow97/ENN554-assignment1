@@ -2,27 +2,18 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3acd93fa-17a9-45b3-a68b-fd2b471510b5" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ass1/modeling/farm.py" beforeDir="false" afterPath="$PROJECT_DIR$/ass1/modeling/farm.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ass1/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/ass1/run.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/enn554" beforeDir="false" afterPath="$PROJECT_DIR$/enn554" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/enn554/notebooks/experimental/wind_farm_layout.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/enn554/notebooks/experimental/wind_farm_layout.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notebooks/nb1_wind_resource_analysis.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/notebooks/nb1_wind_resource_analysis.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notebooks/nb2_turbines.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/notebooks/nb2_turbines.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notebooks/nb3_lcoe_results.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/notebooks/nb3_lcoe_results.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output/turbines/DTU_Reference_v1_10MW_178/power_curve.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/turbines/DTU_Reference_v1_10MW_178/power_curve.jpeg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/output/farm/ConfigurationOption.NINE/aep_per_turbine.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/farm/ConfigurationOption.NINE/aep_per_turbine.jpeg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/output/farm/ConfigurationOption.SIXTEEN/aep_per_turbine.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/farm/ConfigurationOption.SIXTEEN/aep_per_turbine.jpeg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/output/farm/ConfigurationOption.TWENTY_FIVE/aep_per_turbine.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/farm/ConfigurationOption.TWENTY_FIVE/aep_per_turbine.jpeg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/output/turbines/DTU_Reference_v1_10MW_178/power_distribution.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/turbines/DTU_Reference_v1_10MW_178/power_distribution.jpeg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output/turbines/NREL_Reference_10MW/power_curve.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/turbines/NREL_Reference_10MW/power_curve.jpeg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/output/turbines/NREL_Reference_10MW/power_distribution.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/turbines/NREL_Reference_10MW/power_distribution.jpeg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output/turbines/NREL_Reference_6MW/power_curve.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/turbines/NREL_Reference_6MW/power_curve.jpeg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/output/turbines/NREL_Reference_6MW/power_distribution.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/turbines/NREL_Reference_6MW/power_distribution.jpeg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output/turbines/NREL_Reference_8MW/power_curve.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/turbines/NREL_Reference_8MW/power_curve.jpeg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/output/turbines/NREL_Reference_8MW/power_distribution.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/turbines/NREL_Reference_8MW/power_distribution.jpeg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output/turbines/capex_breakdown.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/turbines/capex_breakdown.jpeg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output/wind_resource/distribution.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/wind_resource/distribution.jpeg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output/wind_resource/wind_rose.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/wind_resource/wind_rose.jpeg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output/wind_resource/wind_rose_heatmap.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/wind_resource/wind_rose_heatmap.jpeg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output/wind_resource/wind_speed_ts.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/wind_resource/wind_speed_ts.jpeg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output/wind_resource/ws_heatmap_mean.jpeg" beforeDir="false" afterPath="$PROJECT_DIR$/output/wind_resource/ws_heatmap_mean.jpeg" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,7 +38,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "ai.playground.ignore.import.keys.banner.in.settings": "true",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "Aritz/test",
     "last_opened_file_path": "C:/Uni/14. Semester/Kurse/Design of Renewable Energy Production Systems/Python/ENN554-assignment1",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "advanced.settings",
@@ -76,6 +67,29 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="origin/main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

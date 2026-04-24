@@ -125,6 +125,12 @@ def assess_windfarm(wind: WindResourceModel, farm: WindFarm) -> None:
     typer.echo(f"── Wind farm assessment: {farm.configuration}")
     out = OUTPUT_DIR / "farm" / str(farm.configuration)
     out.mkdir(parents=True, exist_ok=True)
+    typer.echo(f"  Optimising layout...")
+    farm.optimize_layout(wind)
+
+    typer.echo(f"  Prevailing wind direction: {farm._prevailing_wind_direction():.1f}°")
+    typer.echo(f"  Optimized boundary angle:  {farm._optimized_angle:.1f}°")
+
     _save(farm.plot_aep_per_turbine(wind), out / "aep_per_turbine.jpeg")
 
 def compare_microgrids(fin: FinancialModel, turbine: WindTurbine) -> None:
