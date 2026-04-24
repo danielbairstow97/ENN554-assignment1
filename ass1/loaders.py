@@ -22,6 +22,21 @@ def load_tmy():
     return df
 
 
+def load_2023() -> pd.DataFrame:
+    """Load the Typical Meteorological Year of the site"""
+    file_path = DATA_DIR / "nasa_2023.csv"
+    with open(file_path) as fp:
+        skip_until_line = next(i for i, line in enumerate(fp) if line.startswith("YEAR"))
+
+    df = pd.read_csv(file_path, skiprows=skip_until_line, dtype_backend="numpy_nullable")
+    df["Time"] = pd.to_datetime(
+        df[["YEAR", "MO", "DY", "HR"]].rename(
+            columns={"YEAR": "year", "MO": "month", "DY": "day", "HR": "hour"}
+        )
+    )
+    return df
+
+
 def load_demand():
     """Load demand at the site"""
     demand_path = DATA_DIR / "load_project_2026-1.xlsx"
@@ -31,7 +46,7 @@ def load_demand():
 def load_site_year() -> pd.DataFrame:
     """Load demand and wind speed at the site"""
     demand = load_demand()
-    weather = load_tmy()
+    weather = load_2023()
 
     # Replace TMY year with the demand year so the join keys align
     site_year = demand["Time"].dt.year.iloc[0]
@@ -42,7 +57,7 @@ def load_site_year() -> pd.DataFrame:
 
 
 def load_wind_resource() -> WindResourceData:
-    df = load_tmy()
+    df = load_2023()
     return WindResourceData(df["Time"], df["WS50M"], df["WD50M"])
 
 
