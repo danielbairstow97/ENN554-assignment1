@@ -65,9 +65,8 @@ class TurbineFinancialModel(BaseFinancialModel):
     def cost_turbine_capex(self, turbine: WindTurbine) -> tuple[float, dict[str, float]]:
         """Returns (total_capex_AUD, component_breakdown)."""
         costs = {
-            "Rotor": self.wt_rotor_cost * turbine.rotor_area,
-            "Tower": self.wt_tower_cost * turbine.rotor_area,
-            "Other": self.wt_other_cost * turbine.rated_power_kw,
+            "Rotor + Tower (AUD)": (self.wt_rotor_cost + self.wt_tower_cost) * turbine.rotor_area,
+            "Other (AUD)": self.wt_other_cost * turbine.rated_power_kw,
         }
         return sum(costs.values()), costs
 

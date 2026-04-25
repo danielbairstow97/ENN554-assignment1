@@ -97,9 +97,8 @@ class WindFarm:
         wd = np.asarray(wd, dtype=float)
 
         model = self._wf_model(wind_model)
-        print("Modelling")
-        sim = model(self.x, self.y, ws=ws_hub, wd=wd)
-        print("Getting power")
+        sim = model(self.x, self.y, ws=ws_hub, wd=wd, time=True)
+
         return sim.Power.values.sum(axis=0) / 1_000  # W → kW
 
     # ------------------------------------------------------------------
@@ -452,7 +451,7 @@ class WindFarmOptimiser:
             method="SLSQP",
             constraints=constraints,
             bounds=bounds,
-            options={"maxiter": 100, "ftol": 1e-1, "disp": True},
+            options={"maxiter": 100, "ftol": 1e-2, "disp": True},
         )
 
         x_opt, y_opt = result.x[:n_wt], result.x[n_wt : 2 * n_wt]

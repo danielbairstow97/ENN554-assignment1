@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from scipy import integrate
 
 from ass1.modeling.location import WindResourceModel
 from ass1.modeling.turbine import WindTurbine
@@ -295,7 +294,7 @@ def plot_power_curves(turbines: list[WindTurbine], n_points: int = 300) -> go.Fi
     COLORS = ["#ff6b35", "#a78bfa", "#34d399", "#fbbf24", "#f87171"]
 
     max_cutout_50m = max(
-        t.cut_out_wind_speed / (t.hub_height() / 50.0) ** (1 / 7.0) for t in turbines
+        t.cut_out_wind_speed / ((t.hub_height() / 50.0) ** (0.1)) for t in turbines
     )
     ws_50 = np.linspace(0, max_cutout_50m * 1.05, n_points)
 
@@ -316,7 +315,7 @@ def plot_power_curves(turbines: list[WindTurbine], n_points: int = 300) -> go.Fi
         )
 
         # Mark rated and cut-out at 50m equivalent speeds
-        rated_50m = turbine.rated_wind_speed / ((turbine.hub_height() / 50.0) ** (0.1))
+        rated_50m = turbine.ws_at_50(np.array([turbine.rated_wind_speed]))[0]
         rated_power = turbine.power_at(np.array([turbine.rated_wind_speed]))[0]
 
         fig.add_trace(
@@ -334,6 +333,9 @@ def plot_power_curves(turbines: list[WindTurbine], n_points: int = 300) -> go.Fi
             title="Wind Speed at 50m (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
         ),
         yaxis=dict(title="Power Output (kW)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
+        width=1000,
+        height=600,
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
     )
     return fig
 
@@ -350,14 +352,7 @@ def plot_power_analysis(
     """
     COLORS = ["#ff6b35", "#a78bfa", "#34d399", "#fbbf24", "#f87171"]
 
-    fig = make_subplots(
-        rows=1,
-        cols=2,
-        subplot_titles=(
-            "Power Output Distribution  P(U)·f(U)",
-            "Cumulative AEP Contribution",
-        ),
-    )
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     # Weibull PDF on left panel as shared reference
     max_cutout = max(t.cut_out_wind_speed for t in turbines)
@@ -373,10 +368,8 @@ def plot_power_analysis(
             line=dict(color="#00d4ff", width=1.5, dash="dot"),
             fill="tozeroy",
             fillcolor="rgba(0,212,255,0.06)",
-            yaxis="y1",
         ),
-        row=1,
-        col=1,
+        secondary_y=True,
     )
 
     for i, turbine in enumerate(turbines):
@@ -385,6 +378,7 @@ def plot_power_analysis(
 
         power = turbine.power_at(ws_grid)  # kW
         integrand = power * pdf_vals  # P(U)·f(U)
+        aep_gwh = wind_resource.aep(turbine) / 1e6
 
         # AEP contribution per wind speed bin
         fig.add_trace(
@@ -392,70 +386,16 @@ def plot_power_analysis(
                 x=ws_grid,
                 y=integrand,
                 mode="lines",
-                name=label,
-                line=dict(color=color, width=2.5),
-                fill="tozeroy",
-                fillcolor=f"rgba{(*_hex_to_rgb(color), 0.08)}",
-            ),
-            row=1,
-            col=1,
-        )
-
-        # Cumulative AEP contribution (right panel)
-        cumulative = np.array(
-            [
-                integrate.simpson(integrand[: j + 1], x=ws_grid[: j + 1])
-                for j in range(len(ws_grid))
-            ]
-        )
-        total = cumulative[-1]
-        if total > 0:
-            cumulative /= total
-
-        aep_gwh = wind_resource.aep(turbine) / 1e6
-        fig.add_trace(
-            go.Scatter(
-                x=ws_grid,
-                y=cumulative,
-                mode="lines",
                 name=f"{label}  ({aep_gwh:.2f} GWh/yr)",
                 line=dict(color=color, width=2.5),
-                showlegend=True,
             ),
-            row=1,
-            col=2,
         )
 
-        # Mark wind speed at which 50% and 90% of AEP is accumulated
-        for threshold, symbol in [(0.5, "diamond"), (0.9, "square")]:
-            idx = np.searchsorted(cumulative, threshold)
-            if idx < len(ws_grid):
-                fig.add_trace(
-                    go.Scatter(
-                        x=[ws_grid[idx]],
-                        y=[threshold],
-                        mode="markers",
-                        marker=dict(color=color, size=8, symbol=symbol),
-                        showlegend=False,
-                        hovertemplate=(
-                            f"{label}<br>{threshold:.0%} AEP below %{{x:.1f}} m/s<extra></extra>"
-                        ),
-                    ),
-                    row=1,
-                    col=2,
-                )
-
     fig.update_layout(
-        title=dict(
-            text=(
-                f"Power Output Analysis — Weibull Resource "
-                f"(k={wind_resource.shape:.2f}, λ={wind_resource.scale:.2f} m/s)"
-            ),
-            x=0.5,
-        ),
-        legend=dict(x=0.35, y=-0.15, orientation="h"),
+        legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.9),
         hovermode="x unified",
-        height=500,
+        width=1000,
+        height=600,
     )
     fig.update_xaxes(
         title_text="Wind Speed (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
@@ -464,17 +404,8 @@ def plot_power_analysis(
         title_text="P(U)·f(U)  (kW per unit wind speed)",
         showgrid=True,
         gridcolor="rgba(255,255,255,0.08)",
-        row=1,
-        col=1,
     )
-    fig.update_yaxes(
-        title_text="Cumulative AEP Fraction",
-        showgrid=True,
-        gridcolor="rgba(255,255,255,0.08)",
-        range=[0, 1.02],
-        row=1,
-        col=2,
-    )
+    fig.update_yaxes(title_text="Wind PDF  f(U)", secondary_y=True)
     return fig
 
 

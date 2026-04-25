@@ -39,6 +39,7 @@ class WindTurbine(_PyWakeWindTurbine):
         self.cut_in_wind_speed = cut_in_wind_speed
         self.cut_out_wind_speed = cut_out_wind_speed
         self.power_curve = power_curve
+        self.extra_hub_height = hub_height
 
         ws = power_curve["wind_speed"].to_numpy()
         power = power_curve["power_kw"].to_numpy()
@@ -108,6 +109,9 @@ class WindTurbine(_PyWakeWindTurbine):
 
     def ws_at_hub(self, ws_50: np.ndarray) -> np.ndarray:
         return np.asarray(ws_50, dtype=float) * (self.hub_height() / 50.0) ** (0.1)
+
+    def ws_at_50(self, ws_hub: np.ndarray) -> np.ndarray:
+        return ws_hub / ((self.hub_height() / 50.0) ** (0.1))
 
     # ------------------------------------------------------------------
     # Plot

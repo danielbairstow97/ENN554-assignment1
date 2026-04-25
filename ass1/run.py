@@ -94,15 +94,27 @@ def compare_turbines(
 
     capex_rows = {}
     summary_rows = {}
+    details = {}
 
     for turbine in turbine_options:
         aep = wind.aep(turbine)  # kWh/yr
         capex, cost_breakdown = fin.cost_turbine_capex(turbine)  # AUD
         lcoe = fin.lcoe(turbine, aep)  # AUD/kWh
 
+        details[turbine.name_str] = {
+            "Rated Wind Speed (m/s)": turbine.rated_wind_speed,
+            "Rated Power (kW)": turbine.rated_power_kw,
+            "Hub Height (m)": turbine.extra_hub_height,
+            "Rotor Area (m2)": turbine.rotor_area,
+            "Cut in Wind Speed (m/s)": turbine.cut_in_wind_speed,
+            "Cut out Wind Speed (m/s)": turbine.cut_out_wind_speed,
+        }
+
         capex_rows[turbine.name_str] = cost_breakdown
         summary_rows[turbine.name_str] = {
             "Annual Energy Production (GWh)": aep * 1e-6,
+            "Rotor + Tower (AUD)": cost_breakdown["Rotor + Tower (AUD)"],
+            "Other (AUD)": cost_breakdown["Other (AUD)"],
             "Total Capital Cost (AUD)": capex,
             "Levelised Cost of Energy (AUD/MWh)": lcoe * 1e3,
         }
@@ -119,6 +131,12 @@ def compare_turbines(
         ),
         out / "capex_breakdown.jpeg",
     )
+    # Details table
+    details_path = out / "details.csv"
+    details_df = pd.DataFrame(details).rename_axis("Parameter")
+    if not details_path.exists():
+        details_df.to_csv(details_path)
+        typer.echo("  [save] details.csv")
 
     # Summary table
     summary_df = pd.DataFrame(summary_rows).T.rename_axis("Turbine")
@@ -150,11 +168,13 @@ def compare_microgrids(
     typer.echo("── Microgrid comparison")
     site_df = load_site_year()
 
-    out = OUTPUT_DIR / "microgrid"
+    out = OUTPUT_DIR / "farm"
     out.mkdir(parents=True, exist_ok=True)
 
     results = {}
     for configuration, farm in options.items():
+        farm_dir = out / str(configuration)
+
         typer.echo(f"  configuration: {configuration}")
         mg = Microgrid(farm)
         typer.echo("  preparing network")
@@ -162,6 +182,9 @@ def compare_microgrids(
         typer.echo("  solving network")
         battery_size_mwh, battery_power_mwh = mg.solve_network()
         typer.echo(f"  network solved: Slack Generated {mg.slack_energy_mwh}")
+
+        _save(mg.plot_battery_soc(), farm_dir / "mg_battery.jpg")
+        _save(mg.plot_dispatch(), farm_dir / "mg_dispatch.jpg")
 
         _, capex = fin.cost_microgrid_capex(
             farm,
@@ -184,7 +207,7 @@ def compare_microgrids(
         }
 
     results_df = pd.DataFrame(results).T.rename_axis("Configuration")
-    results_df.to_csv(out / "comparison.csv")
+    results_df.to_csv(out / "mg_comparison.csv")
 
     typer.echo(results_df.to_string())
 

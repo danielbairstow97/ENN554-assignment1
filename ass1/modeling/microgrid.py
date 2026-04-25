@@ -83,14 +83,10 @@ class Microgrid:
         wd = site["WD50M"].to_numpy()
         load_mw = site["Load [MW]"].to_numpy()
 
-        print("Setting snapshots")
         self.n.set_snapshots(ts)
-        print("Setting load")
         self.n.loads_t.p_set["demand"] = load_mw
 
-        print("Calculating farm output")
         windfarm_output_kw = self.farm.power_at_50m(wind, ws, wd)
-        print("Calculated")
         windfarm_output_mw = windfarm_output_kw / 1_000.0
 
         nameplate_mw = self.farm.nameplate_capacity_mw
@@ -105,7 +101,6 @@ class Microgrid:
             c_pow_per_mw,
         )
         self.n.storage_units.loc["battery", "capital_cost"] = capital_cost_per_mw
-        print("Prepared")
 
     def solve_network(self) -> tuple[float, float]:
         """Run the LP. Returns optimal battery energy capacity in MWh."""
