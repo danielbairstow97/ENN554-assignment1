@@ -98,14 +98,16 @@ class WindTurbine(_PyWakeWindTurbine):
         Power output (kW) at hub-height wind speeds, with cut-in/out applied.
         Delegates to PyWake's interpolation — no duplicated logic.
         """
-        ws_hub = np.asarray(ws_hub, dtype=float)
         power = self.power(ws_hub) / 1_000  # PyWake returns watts → kW
         power[(ws_hub < self.cut_in_wind_speed) | (ws_hub > self.cut_out_wind_speed)] = 0.0
         return power
 
     def power_at_50m(self, ws_50: np.ndarray) -> np.ndarray:
-        ws_hub = np.asarray(ws_50, dtype=float) * (self.hub_height() / 50.0) ** (1 / 7.0)
+        ws_hub = self.ws_at_hub(ws_50)
         return self.power_at(ws_hub)
+
+    def ws_at_hub(self, ws_50: np.ndarray) -> np.ndarray:
+        return np.asarray(ws_50, dtype=float) * (self.hub_height() / 50.0) ** (0.1)
 
     # ------------------------------------------------------------------
     # Plot

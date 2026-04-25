@@ -3,6 +3,10 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from scipy import integrate
+
+from ass1.modeling.location import WindResourceModel
+from ass1.modeling.turbine import WindTurbine
 
 
 def plot_load_timeseries(df: pd.DataFrame, rolling_window: int = 7 * 24) -> go.Figure:
@@ -280,3 +284,201 @@ def plot_seasonal_wind_roses(df: pd.DataFrame) -> go.Figure:
         height=480,
     )
     return fig
+
+
+def plot_power_curves(turbines: list[WindTurbine], n_points: int = 300) -> go.Figure:
+    """
+    All turbine power curves on a single plot, x-axis adjusted to
+    50m reference wind speed so curves are comparable at the same
+    measurement height.
+    """
+    COLORS = ["#ff6b35", "#a78bfa", "#34d399", "#fbbf24", "#f87171"]
+
+    max_cutout_50m = max(
+        t.cut_out_wind_speed / (t.hub_height() / 50.0) ** (1 / 7.0) for t in turbines
+    )
+    ws_50 = np.linspace(0, max_cutout_50m * 1.05, n_points)
+
+    fig = go.Figure()
+
+    for i, turbine in enumerate(turbines):
+        color = COLORS[i % len(COLORS)]
+        power = turbine.power_at_50m(ws_50)
+
+        fig.add_trace(
+            go.Scatter(
+                x=ws_50,
+                y=power,
+                mode="lines",
+                name=turbine.name_str,
+                line=dict(color=color, width=2.5),
+            )
+        )
+
+        # Mark rated and cut-out at 50m equivalent speeds
+        rated_50m = turbine.rated_wind_speed / ((turbine.hub_height() / 50.0) ** (0.1))
+        rated_power = turbine.power_at(np.array([turbine.rated_wind_speed]))[0]
+
+        fig.add_trace(
+            go.Scatter(
+                x=[rated_50m],
+                y=[rated_power],
+                mode="markers",
+                marker=dict(color=color, size=8, symbol=["diamond", "x"]),
+                showlegend=False,
+            )
+        )
+
+    fig.update_layout(
+        xaxis=dict(
+            title="Wind Speed at 50m (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
+        ),
+        yaxis=dict(title="Power Output (kW)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
+    )
+    return fig
+
+
+def plot_power_analysis(
+    wind_resource: WindResourceModel, turbines: list[WindTurbine], n_points: int = 500
+) -> go.Figure:
+    """
+    Two subplots:
+      Left  — Power output distribution P(U)·f(U) for all turbines,
+               showing how much each wind speed bin contributes to AEP.
+      Right — Cumulative contribution: what fraction of total AEP
+               comes from wind speeds below U, for each turbine.
+    """
+    COLORS = ["#ff6b35", "#a78bfa", "#34d399", "#fbbf24", "#f87171"]
+
+    fig = make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=(
+            "Power Output Distribution  P(U)·f(U)",
+            "Cumulative AEP Contribution",
+        ),
+    )
+
+    # Weibull PDF on left panel as shared reference
+    max_cutout = max(t.cut_out_wind_speed for t in turbines)
+    ws_grid = np.linspace(0, max_cutout * 1.05, n_points)
+    pdf_vals = wind_resource.pdf(ws_grid)
+
+    fig.add_trace(
+        go.Scatter(
+            x=ws_grid,
+            y=pdf_vals,
+            mode="lines",
+            name="Wind PDF  f(U)",
+            line=dict(color="#00d4ff", width=1.5, dash="dot"),
+            fill="tozeroy",
+            fillcolor="rgba(0,212,255,0.06)",
+            yaxis="y1",
+        ),
+        row=1,
+        col=1,
+    )
+
+    for i, turbine in enumerate(turbines):
+        color = COLORS[i % len(COLORS)]
+        label = turbine.name_str
+
+        power = turbine.power_at(ws_grid)  # kW
+        integrand = power * pdf_vals  # P(U)·f(U)
+
+        # AEP contribution per wind speed bin
+        fig.add_trace(
+            go.Scatter(
+                x=ws_grid,
+                y=integrand,
+                mode="lines",
+                name=label,
+                line=dict(color=color, width=2.5),
+                fill="tozeroy",
+                fillcolor=f"rgba{(*_hex_to_rgb(color), 0.08)}",
+            ),
+            row=1,
+            col=1,
+        )
+
+        # Cumulative AEP contribution (right panel)
+        cumulative = np.array(
+            [
+                integrate.simpson(integrand[: j + 1], x=ws_grid[: j + 1])
+                for j in range(len(ws_grid))
+            ]
+        )
+        total = cumulative[-1]
+        if total > 0:
+            cumulative /= total
+
+        aep_gwh = wind_resource.aep(turbine) / 1e6
+        fig.add_trace(
+            go.Scatter(
+                x=ws_grid,
+                y=cumulative,
+                mode="lines",
+                name=f"{label}  ({aep_gwh:.2f} GWh/yr)",
+                line=dict(color=color, width=2.5),
+                showlegend=True,
+            ),
+            row=1,
+            col=2,
+        )
+
+        # Mark wind speed at which 50% and 90% of AEP is accumulated
+        for threshold, symbol in [(0.5, "diamond"), (0.9, "square")]:
+            idx = np.searchsorted(cumulative, threshold)
+            if idx < len(ws_grid):
+                fig.add_trace(
+                    go.Scatter(
+                        x=[ws_grid[idx]],
+                        y=[threshold],
+                        mode="markers",
+                        marker=dict(color=color, size=8, symbol=symbol),
+                        showlegend=False,
+                        hovertemplate=(
+                            f"{label}<br>{threshold:.0%} AEP below %{{x:.1f}} m/s<extra></extra>"
+                        ),
+                    ),
+                    row=1,
+                    col=2,
+                )
+
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"Power Output Analysis — Weibull Resource "
+                f"(k={wind_resource.shape:.2f}, λ={wind_resource.scale:.2f} m/s)"
+            ),
+            x=0.5,
+        ),
+        legend=dict(x=0.35, y=-0.15, orientation="h"),
+        hovermode="x unified",
+        height=500,
+    )
+    fig.update_xaxes(
+        title_text="Wind Speed (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
+    )
+    fig.update_yaxes(
+        title_text="P(U)·f(U)  (kW per unit wind speed)",
+        showgrid=True,
+        gridcolor="rgba(255,255,255,0.08)",
+        row=1,
+        col=1,
+    )
+    fig.update_yaxes(
+        title_text="Cumulative AEP Fraction",
+        showgrid=True,
+        gridcolor="rgba(255,255,255,0.08)",
+        range=[0, 1.02],
+        row=1,
+        col=2,
+    )
+    return fig
+
+
+def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    """Convert #rrggbb to (r, g, b) for rgba strings."""
+    h = hex_color.lstrip("#")
+    return tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))
