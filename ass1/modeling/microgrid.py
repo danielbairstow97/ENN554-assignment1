@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import pypsa
 
 from ass1.modeling.farm import WindFarm
+from ass1.modeling.location import WindResourceModel
 
 
 class Microgrid:
@@ -54,6 +55,7 @@ class Microgrid:
             bus="Seaspray",
             p_nom=self.farm.nameplate_capacity_mw,
             p_nom_extendable=False,
+            p_min_pu=0.0,
             marginal_cost=0.0,
             carrier="wind",
         )
@@ -73,7 +75,7 @@ class Microgrid:
         n.sanitize()
         self.n = n
 
-    def prepare_network(self, site: pd.DataFrame) -> None:
+    def prepare_network(self, site: pd.DataFrame, wind: WindResourceModel) -> None:
         """Set time-series inputs on the network."""
         site = _coerce_arrow_strings(site)
         ts = site["Time"]
@@ -84,28 +86,25 @@ class Microgrid:
         self.n.set_snapshots(ts)
         self.n.loads_t.p_set["demand"] = load_mw
 
-        windfarm_output_kw = self.farm.power_at_50m(ws, wd)
+        windfarm_output_kw = self.farm.power_at_50m(wind, ws, wd)
         windfarm_output_mw = windfarm_output_kw / 1_000.0
 
         nameplate_mw = self.farm.nameplate_capacity_mw
-        if nameplate_mw > 0:
-            p_max_pu = np.clip(windfarm_output_mw / nameplate_mw, 0.0, 1.0)
-        else:
-            p_max_pu = np.zeros_like(windfarm_output_mw)
+        p_max_pu = windfarm_output_mw / nameplate_mw
 
         self.n.generators_t.p_max_pu["wind_farm"] = p_max_pu
 
         c_en_per_mwh = 300_000.0
         c_pow_per_mw = 375_000.0
         capital_cost_per_mw = max(
-            self.BATTERY_MAX_HOURS * c_en_per_mwh,
+            c_en_per_mwh / self.BATTERY_MAX_HOURS,
             c_pow_per_mw,
         )
-        self.n.storage_units.at["battery", "capital_cost"] = capital_cost_per_mw
+        self.n.storage_units.loc["battery", "capital_cost"] = capital_cost_per_mw
 
-    def solve_network(self) -> float:
+    def solve_network(self) -> tuple[float, float]:
         """Run the LP. Returns optimal battery energy capacity in MWh."""
-        self.n.optimize(solver_name="highs")
+        self.n.optimize()
 
         p_nom_opt_mw = float(self.n.storage_units.at["battery", "p_nom_opt"])
         e_nom_opt_mwh = p_nom_opt_mw * self.BATTERY_MAX_HOURS
@@ -118,29 +117,11 @@ class Microgrid:
 
         self.slack_energy_mwh = float(self.n.generators_t.p["dummy"].sum())
 
-        return e_nom_opt_mwh
+        return e_nom_opt_mwh, p_nom_opt_mw
 
     @property
     def total_load_mwh(self) -> float:
         return float(self.n.loads_t.p_set["demand"].sum())
-
-    def acoe(self, wind_farm_capex: float, wind_farm_foc: float, fcr: float) -> float:
-        """Actual Cost of Electricity ($/MWh) from brief eq. (4)."""
-        c_en_per_mwh = 300_000.0
-        c_pow_per_mw = 375_000.0
-        bess_capex = max(
-            c_en_per_mwh * (self.battery_energy_mwh or 0.0),
-            c_pow_per_mw * (self.battery_power_mw or 0.0),
-        )
-        bess_foc = 10_000.0 * (self.battery_power_mw or 0.0)
-
-        tcc = wind_farm_capex + bess_capex
-        oc = wind_farm_foc + bess_foc
-        load_mwh = self.total_load_mwh
-
-        if load_mwh == 0:
-            return float("inf")
-        return (fcr * tcc + oc) / load_mwh
 
     def plot_dispatch(self) -> go.Figure:
         """Stacked area chart: wind + battery discharge vs load over the year."""
@@ -151,25 +132,41 @@ class Microgrid:
 
         w = 24 * 7
         fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=wind.index, y=wind.rolling(w, center=True).mean(),
-            name="Wind (dispatched)", line=dict(color="#00d4ff", width=2),
-            stackgroup="one",
-        ))
-        fig.add_trace(go.Scatter(
-            x=bat_dispatch.index, y=bat_dispatch.rolling(w, center=True).mean(),
-            name="Battery discharge", line=dict(color="#34d399", width=2),
-            stackgroup="one",
-        ))
-        fig.add_trace(go.Scatter(
-            x=slack.index, y=slack.rolling(w, center=True).mean(),
-            name="Slack (unmet)", line=dict(color="#f87171", width=2),
-            stackgroup="one",
-        ))
-        fig.add_trace(go.Scatter(
-            x=load.index, y=load.rolling(w, center=True).mean(),
-            name="Load", line=dict(color="#fbbf24", width=2.5, dash="dash"),
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=wind.index,
+                y=wind.rolling(w, center=True).mean(),
+                name="Wind (dispatched)",
+                line=dict(color="#00d4ff", width=2),
+                stackgroup="one",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=bat_dispatch.index,
+                y=bat_dispatch.rolling(w, center=True).mean(),
+                name="Battery discharge",
+                line=dict(color="#34d399", width=2),
+                stackgroup="one",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=slack.index,
+                y=slack.rolling(w, center=True).mean(),
+                name="Slack (unmet)",
+                line=dict(color="#f87171", width=2),
+                stackgroup="one",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=load.index,
+                y=load.rolling(w, center=True).mean(),
+                name="Load",
+                line=dict(color="#fbbf24", width=2.5, dash="dash"),
+            )
+        )
         fig.update_layout(
             title=dict(
                 text=(
@@ -182,9 +179,6 @@ class Microgrid:
             ),
             xaxis=dict(title="Date", showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
             yaxis=dict(title="Power (MW)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
             hovermode="x unified",
             legend=dict(x=0.01, y=0.99),
         )
@@ -194,12 +188,17 @@ class Microgrid:
         """Battery state of charge over the year."""
         soc = self.n.storage_units_t.state_of_charge["battery"]
         fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=soc.index, y=soc.values, mode="lines",
-            line=dict(color="#a78bfa", width=1.5),
-            fill="tozeroy", fillcolor="rgba(167,139,250,0.15)",
-            name="State of charge",
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=soc.index,
+                y=soc.values,
+                mode="lines",
+                line=dict(color="#a78bfa", width=1.5),
+                fill="tozeroy",
+                fillcolor="rgba(167,139,250,0.15)",
+                name="State of charge",
+            )
+        )
         fig.add_hline(
             y=self.battery_energy_mwh,
             line=dict(color="#f87171", width=1, dash="dash"),
@@ -208,10 +207,9 @@ class Microgrid:
         fig.update_layout(
             title=dict(text="Battery state of charge", x=0.5),
             xaxis=dict(title="Date", showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
-            yaxis=dict(title="Energy stored (MWh)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
-            template="plotly_dark",
-            paper_bgcolor="#0f1117",
-            plot_bgcolor="#0f1117",
+            yaxis=dict(
+                title="Energy stored (MWh)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
+            ),
             hovermode="x unified",
         )
         return fig
