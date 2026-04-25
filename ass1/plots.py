@@ -334,7 +334,7 @@ def plot_power_curves(turbines: list[WindTurbine], n_points: int = 300) -> go.Fi
         ),
         yaxis=dict(title="Power Output (kW)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
         width=1000,
-        height=600,
+        height=500,
         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
     )
     return fig
@@ -395,7 +395,7 @@ def plot_power_analysis(
         legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.9),
         hovermode="x unified",
         width=1000,
-        height=600,
+        height=500,
     )
     fig.update_xaxes(
         title_text="Wind Speed (m/s)", showgrid=True, gridcolor="rgba(255,255,255,0.08)"
