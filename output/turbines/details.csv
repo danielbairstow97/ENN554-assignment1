@@ -1,0 +1,7 @@
+Parameter,NREL_Reference_6MW,NREL_Reference_8MW,NREL_Reference_10MW,DTU_Reference_v1_10MW_178
+Rated Wind Speed (m/s),12.0,12.0,12.0,11.4
+Rated Power (kW),6000.0,8000.0,10000.0,10000.0
+Hub Height (m),100.0,112.0,125.0,119.0
+Rotor Area (m2),18869.190875623695,25446.900494077323,33006.35781677777,24968.50661877031
+Cut in Wind Speed (m/s),4.0,4.0,4.0,4.0
+Cut out Wind Speed (m/s),25.0,25.0,25.0,25.0
