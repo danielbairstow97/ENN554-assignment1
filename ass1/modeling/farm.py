@@ -29,7 +29,6 @@ class WindFarm:
 
         # xy_optimized is set by optimize_layout() — None until then
         self.xy_optimized: tuple[np.ndarray, np.ndarray] | None = None
-        self._optimized_angle: float | None = None
 
     def _prevailing_wind_direction(self) -> float:
         """
@@ -46,10 +45,7 @@ class WindFarm:
         After optimize_layout(), uses the optimized angle automatically.
         """
         size = self.BOUNDARY_SIZE_M
-
-        # Use optimized angle if available, otherwise prevailing wind direction
-        if angle_deg is None:
-            angle_deg = getattr(self, '_optimized_angle', 0.0)
+        angle_deg = 0.0
 
         corners = np.array([
             [0, 0],
@@ -63,6 +59,17 @@ class WindFarm:
         rot_matrix = np.array([[c, -s], [s, c]])
 
         return (rot_matrix @ corners.T).T
+
+    def _make_half_plane(self, p1: np.ndarray, p2: np.ndarray, xy: np.ndarray, n_wt: int) -> float:
+        """
+        Signed distance of all turbines from edge p1→p2.
+        Returns minimum distance — must be >= 0 for all turbines to be inside.
+        """
+        x = xy[:n_wt]
+        y = xy[n_wt:2 * n_wt]
+        edge = p2 - p1
+        normal = np.array([-edge[1], edge[0]])
+        return float(((x - p1[0]) * normal[0] + (y - p1[1]) * normal[1]).min())
 
     def _make_start_pos(self, wind_model: WindResourceModel) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -158,10 +165,9 @@ class WindFarm:
 
         # Starting positions — evenly spread inside the boundary
         x_init, y_init = self._make_start_pos(wind_model)
-        angle_init = 0.0
 
-        # Flatten into single array: [x0..xn, y0..yn, angle]
-        xy_init = np.concatenate([x_init, y_init, [angle_init]])
+        # Flatten into single array: [x0..xn, y0..yn]
+        xy_init = np.concatenate([x_init, y_init])
 
         # --- Objective function ---
         def neg_aep(xy):
@@ -171,48 +177,10 @@ class WindFarm:
             print(f"  AEP: {aep:.2f} GWh")
             return -aep
 
-        # --- Boundary builder ---
-        def get_boundary(angle_deg: float) -> np.ndarray:
-            """
-            Build the 1732m × 1732m square boundary rotated by angle_deg.
-            Returns shape (4, 2) corner coordinates.
-            """
-            size = self.BOUNDARY_SIZE_M
-            corners = np.array([
-                [0, 0],
-                [size, 0],
-                [size, size],
-                [0, size],
-            ], dtype=float)
-            angle_rad = np.radians(angle_deg)
-            c, s = np.cos(angle_rad), np.sin(angle_rad)
-            rot_matrix = np.array([[c, -s], [s, c]])
-            return (rot_matrix @ corners.T).T
-
-        # --- Boundary constraint ---
-        def make_half_plane(p1: np.ndarray, p2: np.ndarray, xy: np.ndarray) -> float:
-            """
-            Signed distance of all turbines from edge p1→p2.
-            Returns minimum distance — must be >= 0 for all turbines to be inside.
-            """
-            x = xy[:n_wt]
-            y = xy[n_wt:2 * n_wt]
-            edge = p2 - p1
-            normal = np.array([-edge[1], edge[0]])
-            return float(((x - p1[0]) * normal[0] + (y - p1[1]) * normal[1]).min())
-
-        def boundary_constraints(xy: np.ndarray) -> list:
-            """Rebuild boundary at current angle and return 4 half-plane constraints."""
-            angle = xy[2 * n_wt]  # last element is the rotation angle
-            boundary = get_boundary(angle)
-            return [
-                make_half_plane(boundary[i], boundary[(i + 1) % 4], xy)
-                for i in range(4)
-            ]
-
         # One SciPy constraint per boundary edge — all must be >= 0
+        boundary = self._make_boundary()
         constraints = [
-            {'type': 'ineq', 'fun': lambda xy, i=i: boundary_constraints(xy)[i]}
+            {'type': 'ineq', 'fun': lambda xy, i=i: self._make_half_plane(boundary[i], boundary[(i + 1) % 4], xy, n_wt)}
             for i in range(4)
         ]
 
@@ -222,7 +190,7 @@ class WindFarm:
             SciPy requires all values >= 0 — so every pair must be at least 2D apart.
             """
             x = xy[:n_wt]
-            y = xy[n_wt:2 * n_wt]
+            y = xy[n_wt:]
             D = self.turbine.diameter()  # 178.3m → 2D = 356.6m
 
             distances = []
@@ -246,8 +214,7 @@ class WindFarm:
         # Angle: ±90° around initial angle — covers all unique square orientations
         bounds = (
                 [(None, None)] * n_wt +  # x positions
-                [(None, None)] * n_wt +  # y positions
-                [(0, 90)]  # rotation angle
+                [(None, None)] * n_wt   # y positions
         )
 
         # --- Run optimisation ---
@@ -256,11 +223,6 @@ class WindFarm:
         # Extract optimised positions and angle
         x_opt = result.x[:n_wt]
         y_opt = result.x[n_wt:2 * n_wt]
-        angle_opt = result.x[2 * n_wt]
-
-        # Store optimised angle so plot_aep_per_turbine can draw the correct boundary
-        self._optimized_angle = angle_opt
-
         self.xy_optimized = (x_opt, y_opt)
         print(f"  AEP:           {-result.fun:.2f} GWh")
         return self.xy_optimized
@@ -276,8 +238,8 @@ class WindFarm:
         ws_50 = np.asarray(ws_50, dtype=float)
         wd    = np.asarray(wd,    dtype=float)
 
-        # Scale wind speed from 50m to hub height using the power law (1/7 exponent)
-        ws_hub = ws_50 * (self.turbine.hub_height() / 50.0) ** (1 / 7.0)
+        # Scale wind speed from 50m to hub height using the power law (1/10 exponent)
+        ws_hub = ws_50 * (self.turbine.hub_height() / 50.0) ** (1 / 10.0)
 
         site  = wind_model.pywake_site
         model = Bastankhah_PorteAgel_2014(site, self.turbine, k=0.04)
