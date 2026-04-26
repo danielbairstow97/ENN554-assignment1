@@ -125,6 +125,7 @@ class WindFarm:
             "angle_deg": self.angle_deg,
             "x": self.x.tolist(),
             "y": self.y.tolist(),
+            "prevailing_wind": self.prevailing_wind,
         }
         path.write_text(json.dumps(payload, indent=2))
         print(f"[WindFarm] Layout saved → {path}")
@@ -164,6 +165,7 @@ class WindFarm:
             x=np.array(data["x"]),
             y=np.array(data["y"]),
             angle_deg=float(data["angle_deg"]),
+            prevailing_wind=float(data["prevailing_wind"]),
         )
         print(f"[WindFarm] Layout loaded ← {path}")
         return farm
