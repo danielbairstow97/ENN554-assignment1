@@ -16,7 +16,6 @@ class ConfigurationOption(Enum):
 
 
 class WindFarm:
-    # Turbine chosen for the wind farm
     turbine: WindTurbine
     configuration: ConfigurationOption
 
