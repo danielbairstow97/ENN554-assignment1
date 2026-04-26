@@ -229,6 +229,7 @@ def main(
     do_farm: bool = typer.Option(True, "--farm/--no-farm", help="Run microgrid comparison"),
 ) -> None:
     fin = MicrogridFinancialModel()
+    typer.echo(f"FCR for project is: {fin.fcr}")
     wind_data = load_wind_resource()
     wind_resource = wind_data.create_wind_model()
     turbine_options = [load_nrel_6MW(), load_nrel_8MW(), load_nrel_10MW(), load_dtu_10MW()]

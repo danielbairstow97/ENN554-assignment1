@@ -260,13 +260,11 @@ class WindFarm:
                 showgrid=True,
                 gridcolor="rgba(255,255,255,0.08)",
                 scaleanchor="y",
-                range=[0, self.BOUNDARY_SIZE_M],
             ),
             yaxis=dict(
                 title="y [m]",
                 showgrid=True,
                 gridcolor="rgba(255,255,255,0.08)",
-                range=[0, self.BOUNDARY_SIZE_M],
             ),
             height=600,
             width=700,
@@ -451,7 +449,7 @@ class WindFarmOptimiser:
             method="SLSQP",
             constraints=constraints,
             bounds=bounds,
-            options={"maxiter": 100, "ftol": 1e-2, "disp": True},
+            options={"maxiter": 100, "ftol": 1e-5, "disp": True},
         )
 
         x_opt, y_opt = result.x[:n_wt], result.x[n_wt : 2 * n_wt]

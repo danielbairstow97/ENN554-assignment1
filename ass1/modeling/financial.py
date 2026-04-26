@@ -18,25 +18,30 @@ class BaseFinancialModel:
     project_lifetime      : years
     """
 
-    nominal_discount_rate: float = 0.08  # WACC — typical for wind projects
-    inflation_rate: float = 0.025  # ~RBA long-run target
-    project_lifetime: int = 25  # years
+    cost_of_equity: float = 0.15
+    interest_rate: float = 0.07
+    equity_ratio: float = 0.2
+    corporate_tax_rate: float = 0.3
+
+    inflation_rate: float = 0.025
+    project_lifetime: int = 25
+
+    @property
+    def wacc(self) -> float:
+        return self.equity_ratio * self.cost_of_equity + (
+            1 - self.equity_ratio
+        ) * self.interest_rate * (1 - self.corporate_tax_rate)
+
+    @property
+    def nominal_discount_rate(self) -> float:
+        return self.wacc
 
     @property
     def real_discount_rate(self) -> float:
-        """Fisher equation: real rate from nominal rate and inflation."""
-        return (1 + self.nominal_discount_rate) / (1 + self.inflation_rate) - 1
+        return (1 + self.wacc) / (1 + self.inflation_rate) - 1
 
     @property
     def fcr(self) -> float:
-        """
-        Fixed Charge Rate — annualises CAPEX over project lifetime.
-
-        Uses the Capital Recovery Factor (CRF) against the real discount
-        rate, giving a pre-tax FCR suitable for academic LCOE calculations.
-
-            FCR = CRF = r(1+r)^n / ((1+r)^n - 1)
-        """
         r = self.real_discount_rate
         n = self.project_lifetime
         return r * (1 + r) ** n / ((1 + r) ** n - 1)
